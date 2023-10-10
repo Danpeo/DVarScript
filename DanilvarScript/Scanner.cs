@@ -66,12 +66,85 @@ public class Scanner
             case '*':
                 AddToken(TokenType.Star);
                 break;
+            case '!':
+                AddToken(Match('=') ? TokenType.BangEqual : TokenType.Bang);
+                break;
+            case '=':
+                AddToken(Match('=') ? TokenType.EqualEqual : TokenType.Equal);
+                break;
+            case '<':
+                AddToken(Match('=') ? TokenType.LessEqual : TokenType.Less);
+                break;
+            case '>':
+                AddToken(Match('=') ? TokenType.GreaterEqual : TokenType.Greater);
+                break;
+            case '/':
+                if (Match('/'))
+                {
+                    // A comment goes until the end of the line.
+                    while (Peek() != '\n' && !IsAtEnd())
+                        Advance();
+                }
+                else
+                {
+                    AddToken(TokenType.Slash);
+                }
 
+                break;
+            case ' ':
+            case '\r':
+            case '\t':
+                // Ignore whitespace.
+                break;
+
+            case '\n':
+                _line++;
+                break;
+            case '"':
+                String();
+                break;
             default:
                 DVScript.Error(_line, "Unexpected character.");
                 break;
         }
     }
+
+    private void String()
+    {
+        while (Peek() != '"' && !IsAtEnd())
+        {
+            if (Peek() == '\n')
+                _line++;
+            Advance();
+        }
+
+        if (IsAtEnd())
+        {
+            DVScript.Error(_line, "Unterminated string.");
+            return;
+        }
+
+        // The closing ".
+        Advance();
+
+        string value = _source.Substring(_start + 1, _current - _start - 1);
+        AddToken(TokenType.String, value);
+    }
+
+    private bool Match(char expected)
+    {
+        if (IsAtEnd())
+            return false;
+
+        if (_source[_current] != expected)
+            return false;
+
+        _current++;
+        return true;
+    }
+
+    private char Peek() =>
+        IsAtEnd() ? '\0' : _source[_current];
 
     private char Advance() =>
         _source[_current++];
