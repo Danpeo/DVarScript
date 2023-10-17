@@ -1,9 +1,31 @@
+using System.Data.Common;
 using DanilvarScript.Tokens;
 
 namespace DanilvarScript;
 
 public class Scanner
 {
+    private static readonly Dictionary<string, TokenType> Keywords = new()
+    {
+        { "and", TokenType.And },
+        { "class", TokenType.Class },
+        { "else", TokenType.Else },
+        { "false", TokenType.False },
+        { "for", TokenType.For },
+        { "fun", TokenType.Fun },
+        { "if", TokenType.If },
+        { "nil", TokenType.Nil },
+        { "or", TokenType.Or },
+        { "print", TokenType.Print },
+        { "return", TokenType.Return },
+        { "super", TokenType.Super },
+        { "this", TokenType.This },
+        { "true", TokenType.True },
+        { "var", TokenType.Var },
+        { "while", TokenType.While }
+    };
+
+
     private readonly string _source;
     private readonly List<Token> _tokens = new();
     private int _start = 0;
@@ -33,8 +55,8 @@ public class Scanner
 
     private void ScanToken()
     {
-        char character = Advance();
-        switch (character)
+        char c = Advance();
+        switch (c)
         {
             case '(':
                 AddToken(TokenType.LeftParen);
@@ -104,10 +126,62 @@ public class Scanner
                 String();
                 break;
             default:
-                DVScript.Error(_line, "Unexpected character.");
+                if (IsDigit(c))
+                {
+                    Number();
+                }
+                else if (IsAlpha(c))
+                {
+                    Identifier();
+                }
+                else
+                {
+                    DVScript.Error(_line, "Unexpected character.");
+                }
+
                 break;
         }
     }
+
+    private void Identifier()
+    {
+        while (IsAlphaNumeric(Peek()))
+            Advance();
+
+        string text = _source.Substring(_start, _current - _start);
+
+        if (Keywords.TryGetValue(text, out TokenType type))
+            AddToken(type);
+        else
+            AddToken(TokenType.Identifier);
+    }
+
+    private bool IsAlpha(char c) =>
+        c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_';
+
+    private bool IsAlphaNumeric(char c) =>
+        IsAlpha(c) || IsDigit(c);
+
+    private void Number()
+    {
+        while (IsDigit(Peek()))
+            Advance();
+
+        // Look for a fractional part.
+        if (Peek() == '.' && IsDigit(PeeKNext()))
+        {
+            // Consume the "."
+            Advance();
+
+            while (IsDigit(Peek()))
+                Advance();
+        }
+
+        AddToken(TokenType.Number, double.Parse(_source.Substring(_start, _current - _start)));
+    }
+
+    private bool IsDigit(char c) =>
+        c is >= '0' and <= '9';
 
     private void String()
     {
@@ -145,6 +219,9 @@ public class Scanner
 
     private char Peek() =>
         IsAtEnd() ? '\0' : _source[_current];
+
+    private char PeeKNext() =>
+        _current + 1 >= _source.Length ? '\0' : _source[_current + 1];
 
     private char Advance() =>
         _source[_current++];
