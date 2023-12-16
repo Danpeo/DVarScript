@@ -21,11 +21,10 @@ public class Scanner
         { "super", TokenType.Super },
         { "this", TokenType.This },
         { "true", TokenType.True },
-        { "var", TokenType.Var },
+        { "let", TokenType.Let },
         { "while", TokenType.While }
     };
-
-
+    
     private readonly string _source;
     private readonly List<Token> _tokens = new();
     private int _start = 0;
@@ -107,11 +106,14 @@ public class Scanner
                     while (Peek() != '\n' && !IsAtEnd())
                         Advance();
                 }
+                else if (Match('*'))
+                {
+                    MultilineComment();
+                }
                 else
                 {
                     AddToken(TokenType.Slash);
                 }
-
                 break;
             case ' ':
             case '\r':
@@ -126,11 +128,11 @@ public class Scanner
                 String();
                 break;
             default:
-                if (IsDigit(c))
+                if (char.IsDigit(c))
                 {
                     Number();
                 }
-                else if (IsAlpha(c))
+                else if (char.IsLetter(c))
                 {
                     Identifier();
                 }
@@ -143,9 +145,26 @@ public class Scanner
         }
     }
 
+    private void MultilineComment()
+    {
+        while (!(Peek() == '*' && Peek(1) == '/') && !IsAtEnd())
+        {
+            if (Peek() == '\n')
+                _line++;
+            Advance();
+        }
+
+        // Consume the closing */
+        if (!IsAtEnd())
+        {
+            Advance(); // '*'
+            Advance(); // '/'
+        }
+    }
+
     private void Identifier()
     {
-        while (IsAlphaNumeric(Peek()))
+        while (char.IsLetterOrDigit(Peek()))
             Advance();
 
         string text = _source.Substring(_start, _current - _start);
@@ -156,32 +175,23 @@ public class Scanner
             AddToken(TokenType.Identifier);
     }
 
-    private bool IsAlpha(char c) =>
-        c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_';
-
-    private bool IsAlphaNumeric(char c) =>
-        IsAlpha(c) || IsDigit(c);
-
     private void Number()
     {
-        while (IsDigit(Peek()))
+        while (char.IsDigit(Peek()))
             Advance();
 
         // Look for a fractional part.
-        if (Peek() == '.' && IsDigit(PeeKNext()))
+        if (Peek() == '.' && char.IsDigit(Peek(1)))
         {
             // Consume the "."
             Advance();
 
-            while (IsDigit(Peek()))
+            while (char.IsDigit(Peek()))
                 Advance();
         }
 
         AddToken(TokenType.Number, double.Parse(_source.Substring(_start, _current - _start)));
     }
-
-    private bool IsDigit(char c) =>
-        c is >= '0' and <= '9';
 
     private void String()
     {
@@ -217,11 +227,8 @@ public class Scanner
         return true;
     }
 
-    private char Peek() =>
-        IsAtEnd() ? '\0' : _source[_current];
-
-    private char PeeKNext() =>
-        _current + 1 >= _source.Length ? '\0' : _source[_current + 1];
+    private char Peek(int offset = 0) 
+        => _current + offset >= _source.Length ? '\0' : _source[_current + offset];
 
     private char Advance() =>
         _source[_current++];
