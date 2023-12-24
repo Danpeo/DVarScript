@@ -4,9 +4,9 @@ namespace DanilvarScript.Expr;
 
 public class Literal : Expression
 {
-    public object Value { get; private set; }
+    public object? Value { get; private set; }
 
-    public Literal(object value)
+    public Literal(object? value)
     {
         Value = value;
     }

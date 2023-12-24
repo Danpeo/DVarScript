@@ -25,7 +25,7 @@ public class AstPrinter : IVisitor<string>
     }
 
     public string VisitUnaryExpr(Unary expr) 
-        => Parenthesize(expr.Operator.Lexeme, expr.Right);
+        => Parenthesize(expr.TokenOperator.Lexeme, expr.Right);
 
     private string Parenthesize(string name, params Expression[] expressions)
     {

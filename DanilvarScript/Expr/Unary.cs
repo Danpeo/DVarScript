@@ -5,13 +5,13 @@ namespace DanilvarScript.Expr;
 
 public class Unary : Expression
 {
-    public Token Operator { get; private set; }
+    public Token TokenOperator { get; private set; }
 
     public Expression Right { get; private set; }
 
-    public Unary(Token @operator, Expression right)
+    public Unary(Token tokenOperator, Expression right)
     {
-        Operator = @operator;
+        TokenOperator = tokenOperator;
         Right = right;
     }
 

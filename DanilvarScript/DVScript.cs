@@ -1,5 +1,6 @@
-using DanilvarScript;
+using DanilvarScript.Expr;
 using DanilvarScript.Tokens;
+using DanilvarScript.Visitor;
 
 namespace DanilvarScript;
 
@@ -46,12 +47,21 @@ public static class DVScript
     public static void Run(string source)
     {
         var scanner = new Scanner(source);
-        IEnumerable<Token> tokens = scanner.ScanTokens();
+        List<Token> tokens = scanner.ScanTokens();
     
-        foreach (Token token in tokens)
+        /*foreach (Token token in tokens)
         {
             Console.WriteLine(token);
-        }
+        }*/
+
+        var parser = new Parser(tokens);
+        Expression? expression = parser.Parse();
+        
+        if (HadError)
+            return;
+
+        if (expression != null) 
+            Console.WriteLine(new AstPrinter().Print(expression));
     }
     
     public static void Error(int line, string message)
@@ -63,5 +73,10 @@ public static class DVScript
     {
         Console.Error.WriteLine($"[line {line}] Error{where}: {message}");
         HadError = true;
+    }
+
+    public static void Error(Token token, string message)
+    {
+        Report(token.Line, token.Type == TokenType.Eof ? " at end" : $" at '{token.Lexeme}'", message);
     }
 }
