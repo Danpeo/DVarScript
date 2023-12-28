@@ -1,4 +1,4 @@
-﻿
+﻿//TODO: use Cocona later!
 if (args.Length > 1)
 {
     Console.WriteLine("Usage: Danilvar [script]");

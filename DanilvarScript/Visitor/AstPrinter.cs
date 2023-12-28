@@ -27,6 +27,9 @@ public class AstPrinter : IVisitor<string>
     public string VisitUnaryExpr(Unary expr) 
         => Parenthesize(expr.TokenOperator.Lexeme, expr.Right);
 
+    public string VisitTernaryExpr(Ternary expr) 
+        => Parenthesize("ternary", expr.Condition, expr.TrueBranch, expr.FalseBranch);
+
     private string Parenthesize(string name, params Expression[] expressions)
     {
         var strBuilder = new StringBuilder();
