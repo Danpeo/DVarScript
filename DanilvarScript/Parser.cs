@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using DanilvarScript.Expr;
 using DanilvarScript.Tokens;
 using Expression = DanilvarScript.Expr.Expression;
@@ -30,9 +29,12 @@ public class Parser
             return null;
         }
     }
-    
+
     private Expression Expression()
-        => Ternary();
+    {
+        //return Equality();
+        return Ternary();
+    }
 
     private Expression Equality()
         => BaseBinaryExpr(ComparisonExpr, TokenType.EqualEqual, TokenType.BangEqual);
@@ -61,6 +63,7 @@ public class Parser
     private Expression Ternary()
     {
         Expression condition = Equality();
+        
 
         if (Match(TokenType.QuestionMark))
         {
@@ -71,9 +74,10 @@ public class Parser
             return new Ternary(condition, trueBranch, falseBranch);
         }
 
+        
         return condition;
     }
-    
+
     private Expression Primary()
     {
         if (Match(TokenType.False))

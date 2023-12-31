@@ -3,7 +3,7 @@ using DanilvarScript.Expr;
 
 namespace DanilvarScript.Visitor;
 
-public class AstPrinter : IVisitor<string>
+public class AbstartTreePrinter : IVisitor<string>
 {
     public string Print(Expression expr)
     {

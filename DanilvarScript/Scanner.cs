@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Globalization;
 using DanilvarScript.Tokens;
 
 namespace DanilvarScript;
@@ -196,7 +197,8 @@ public class Scanner
                 Advance();
         }
 
-        AddToken(TokenType.Number, double.Parse(_source.Substring(_start, _current - _start)));
+        string number = _source.Substring(_start, _current - _start);
+        AddToken(TokenType.Number, double.Parse(number, CultureInfo.InvariantCulture));
     }
 
     private void String()
@@ -217,7 +219,7 @@ public class Scanner
         // The closing ".
         Advance();
 
-        string value = _source.Substring(_start + 1, _current - _start - 1);
+        string value = _source.Substring(_start + 1, _current - _start - 2);
         AddToken(TokenType.String, value);
     }
 

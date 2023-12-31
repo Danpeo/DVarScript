@@ -1,3 +1,4 @@
+using DanilvarScript.Errors;
 using DanilvarScript.Expr;
 using DanilvarScript.Tokens;
 using DanilvarScript.Visitor;
@@ -6,7 +7,9 @@ namespace DanilvarScript;
 
 public static class DVScript
 {
+    private static readonly Interpreter Interpreter = new();
     private static bool HadError;
+    private static bool HadRuntimeError;
 
     public static void RunFile(string path)
     {
@@ -17,6 +20,9 @@ public static class DVScript
             
             if (HadError)
                 Environment.Exit(65);
+            
+            if (HadRuntimeError)
+                Environment.Exit(70);
         }
         catch (IOException e)
         {
@@ -60,13 +66,21 @@ public static class DVScript
         if (HadError)
             return;
 
+        /*if (expression != null) 
+            Console.WriteLine(new AbstartTreePrinter().Print(expression));*/
         if (expression != null) 
-            Console.WriteLine(new AstPrinter().Print(expression));
+            Interpreter.Interpret(expression);
     }
     
     public static void Error(int line, string message)
     {
         Report(line, "", message);
+    }
+
+    public static void RuntimeError(RuntimeError error)
+    {
+        Console.Error.WriteLine($"{error.Message}\n[line {error.Token.Line}]");
+        HadRuntimeError = true;
     }
     
     public static void Report(int line, string where, string message)
