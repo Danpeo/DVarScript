@@ -1,25 +1,32 @@
 using System.Globalization;
+using DanilvarScript.Env;
 using DanilvarScript.Errors;
 using DanilvarScript.Expr;
+using DanilvarScript.Stmt;
 using DanilvarScript.Tokens;
+using DanilvarScript.Visitor;
 
-namespace DanilvarScript.Visitor;
+namespace DanilvarScript;
 
-public class Interpreter : IVisitor<object>
+public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
 {
-    public void Interpret(Expression expression)
+    private readonly VariableEnvironment _environment = new();
+
+    public void Interpret(IEnumerable<Statement?> statements)
     {
         try
         {
-            object value = Evaluate(expression);
-            Console.WriteLine(Stringify(value));
+            foreach (Statement? statement in statements)
+            {
+                Execute(statement);
+            }
         }
         catch (RuntimeError error)
         {
             DVScript.RuntimeError(error);
         }
     }
-    
+
     public object? VisitBinaryExpr(Binary expr)
     {
         object left = Evaluate(expr.Left);
@@ -50,8 +57,9 @@ public class Interpreter : IVisitor<object>
                 CheckNumberOperands(expr.Operator, left, right);
                 return (double)left / (double)right;
             case TokenType.Star:
-                CheckNumberOperands(expr.Operator, left, right);
-                return (double)left * (double)right;
+                /*CheckNumberOperands(expr.Operator, left, right);
+                return (double)left * (double)right;*/
+                return MultiplyOperands(expr, left, right);
             case TokenType.Plus:
                 return AddOperands(expr, left, right);
         }
@@ -90,8 +98,48 @@ public class Interpreter : IVisitor<object>
         object condition = Evaluate(expr.Condition);
         object trueBranch = Evaluate(expr.TrueBranch);
         object falseBranch = Evaluate(expr.FalseBranch);
-        
+
         return IsTruthy(condition) ? trueBranch : falseBranch;
+    }
+
+    public object? VisitVariableExpr(Variable expr)
+    {
+        return _environment.Get(expr.Name);
+    }
+
+    public object VisitAssignExpr(Assign expr)
+    {
+        object value = Evaluate(expr.Value);
+        _environment.Assign(expr.Name, value);
+
+        return value;
+    }
+
+    public object? VisitPrintStmt(Print stmt)
+    {
+        object value = Evaluate(stmt.Expression);
+        Console.WriteLine(Stringify(value));
+
+        return null;
+    }
+
+    public object? VisitExpressionStmt(ExpressionStmt stmt)
+    {
+        Evaluate(stmt.Expression);
+
+        return null;
+    }
+
+    public object? VisitLetStmt(Let stmt)
+    {
+        object? value = null;
+
+        if (stmt.Initializer != null)
+            value = Evaluate(stmt.Initializer);
+
+        _environment.Define(stmt.Name, value);
+
+        return null;
     }
 
     private string Stringify(object? obj)
@@ -127,6 +175,31 @@ public class Interpreter : IVisitor<object>
 
         throw new RuntimeError(expr.Operator,
             "Operands must either numbers or strings.");
+    }
+
+    private static object? MultiplyOperands(Binary expr, object left, object right)
+    {
+        if (left is double && right is double)
+            return (double)left * (double)right;
+        if (left is string && right is double)
+            return MultiplyString((string)left, (int)(double)right);
+        if (left is double && right is string)
+            return MultiplyString((string)right, (int)(double)left);
+
+        throw new RuntimeError(expr.Operator,
+            "Operands must either numbers or strings.");
+    }
+
+    private static string MultiplyString(string str, int by)
+    {
+        string result = "";
+
+        for (int i = 0; i < by; i++)
+        {
+            result += str;
+        }
+
+        return result;
     }
 
     private void CheckNumberOperand(Token operatorToken, object operand)
@@ -171,6 +244,11 @@ public class Interpreter : IVisitor<object>
             return false;
 
         return lhs.Equals(rhs);
+    }
+
+    private void Execute(Statement? statement)
+    {
+        statement.Accept(this);
     }
 
     private object Evaluate(Expression expression) =>

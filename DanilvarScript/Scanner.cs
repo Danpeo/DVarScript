@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Globalization;
 using DanilvarScript.Tokens;
 
@@ -23,7 +22,8 @@ public class Scanner
         { "this", TokenType.This },
         { "true", TokenType.True },
         { "let", TokenType.Let },
-        { "while", TokenType.While }
+        { "while", TokenType.While },
+        {"be", TokenType.Be}
     };
     
     private readonly string _source;

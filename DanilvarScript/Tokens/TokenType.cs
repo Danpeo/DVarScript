@@ -49,6 +49,7 @@ public enum TokenType
     True,
     Let,
     While,
-
+    Be,
+    
     Eof
 }

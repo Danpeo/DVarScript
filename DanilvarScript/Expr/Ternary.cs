@@ -15,8 +15,8 @@ public class Ternary : Expression
         FalseBranch = falseBranch;
     }
     
-    public override T Accept<T>(IVisitor<T> visitor)
+    public override T Accept<T>(IExprVisitor<T> exprVisitor)
     {
-        return visitor.VisitTernaryExpr(this);
+        return exprVisitor.VisitTernaryExpr(this);
     }
 }

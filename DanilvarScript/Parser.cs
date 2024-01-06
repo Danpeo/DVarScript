@@ -1,4 +1,5 @@
 using DanilvarScript.Expr;
+using DanilvarScript.Stmt;
 using DanilvarScript.Tokens;
 using Expression = DanilvarScript.Expr.Expression;
 
@@ -17,23 +18,99 @@ public class Parser
     {
         _tokens = tokens;
     }
-
-    public Expression? Parse()
+    
+    public IEnumerable<Statement?> Parse()
     {
-        try
+        var statments = new List<Statement?>();
+
+        while (!IsAtEnd())
         {
-            return Expression();
+            statments.Add(Declaration());
         }
-        catch (ParseError e)
-        {
-            return null;
-        }
+
+        return statments;
     }
 
     private Expression Expression()
     {
         //return Equality();
-        return Ternary();
+        //return Ternary();
+        return Assignment();
+    }
+
+    private Expression Assignment()
+    {
+        Expression expression = Ternary();
+
+        if (Match(TokenType.Equal))
+        {
+            Token equals = Prev();
+            Expression value = Assignment();
+
+            if (expression is Variable variable)
+            {
+                Token name = variable.Name;
+
+                return new Assign(name, value);
+            }
+
+            Error(equals, "Invalid assignment target.");
+        }
+
+        return expression;
+    }
+
+    private Statement? Declaration()
+    {
+        try
+        {
+            if (Match(TokenType.Let))
+                return LetDeclaration();
+
+            return Statement();
+        }
+        catch (ParseError e)
+        {
+            Sync();
+            return null;
+        }
+    }
+
+    private Statement LetDeclaration()
+    {
+        Token name = Consume(TokenType.Identifier, "Expect variable name.");
+
+        Expression? initializer = null;
+        if (Match(TokenType.Be))
+        {
+            initializer = Expression();
+        }
+        
+        ConsumeSemicolon("variable declaration");
+        return new Let(name, initializer);
+    }
+
+    private Statement Statement()
+    {
+        if (Match(TokenType.Print))
+            return PrintStmt();
+
+        return ExpressionStmt();
+    }
+
+    private Statement ExpressionStmt()
+    {
+        Expression expression = Expression();
+        ConsumeSemicolon("expression");
+        return new ExpressionStmt(expression);
+    }
+
+    private Statement PrintStmt()
+    {
+        Expression value = Expression();
+        ConsumeSemicolon("value");
+
+        return new Print(value);
     }
 
     private Expression Equality()
@@ -63,7 +140,6 @@ public class Parser
     private Expression Ternary()
     {
         Expression condition = Equality();
-        
 
         if (Match(TokenType.QuestionMark))
         {
@@ -74,7 +150,6 @@ public class Parser
             return new Ternary(condition, trueBranch, falseBranch);
         }
 
-        
         return condition;
     }
 
@@ -90,6 +165,9 @@ public class Parser
         if (Match(TokenType.Number, TokenType.String))
             return new Literal(Prev().Literal);
 
+        if (Match(TokenType.Identifier))
+            return new Variable(Prev());
+        
         if (Match(TokenType.LeftParen))
         {
             Expression expression = Expression();
@@ -108,6 +186,9 @@ public class Parser
 
         throw Error(Peek(), message);
     }
+
+    private void ConsumeSemicolon(string after = "statement") =>
+        Consume(TokenType.Semicolon, $"Expect ';' after {after}.");
 
     private ParseError Error(Token token, string message)
     {
@@ -192,10 +273,8 @@ public class Parser
         return Peek().Type == TokenType.Eof;
     }
 
-    private Token Peek()
-    {
-        return _tokens[_current];
-    }
+    private Token Peek(int offset = 0) =>
+        _tokens[_current + offset];
 
     private Token Prev()
     {

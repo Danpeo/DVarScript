@@ -3,7 +3,7 @@ using DanilvarScript.Expr;
 
 namespace DanilvarScript.Visitor;
 
-public class AbstartTreePrinter : IVisitor<string>
+public class AbstartTreePrinter : IExprVisitor<string>
 {
     public string Print(Expression expr)
     {
@@ -29,6 +29,16 @@ public class AbstartTreePrinter : IVisitor<string>
 
     public string VisitTernaryExpr(Ternary expr) 
         => Parenthesize("ternary", expr.Condition, expr.TrueBranch, expr.FalseBranch);
+
+    public string VisitVariableExpr(Variable expr)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitAssignExpr(Assign expr)
+    {
+        throw new NotImplementedException();
+    }
 
     private string Parenthesize(string name, params Expression[] expressions)
     {
