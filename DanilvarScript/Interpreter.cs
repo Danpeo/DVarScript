@@ -10,7 +10,7 @@ namespace DanilvarScript;
 
 public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
 {
-    private readonly VariableEnvironment _environment = new();
+    private VariableEnvironment _environment = new();
 
     public void Interpret(IEnumerable<Statement?> statements)
     {
@@ -20,6 +20,19 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
             {
                 Execute(statement);
             }
+        }
+        catch (RuntimeError error)
+        {
+            DVScript.RuntimeError(error);
+        }
+    }
+
+    public void Interpret(Expression expression)
+    {
+        try
+        {
+            object value = Evaluate(expression);
+            Console.WriteLine(Stringify(value));
         }
         catch (RuntimeError error)
         {
@@ -84,7 +97,7 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         switch (expr.TokenOperator.Type)
         {
             case TokenType.Bang:
-                return !IsTruthy(right);
+                return IsFalsey(right);
             case TokenType.Minus:
                 CheckNumberOperand(expr.TokenOperator, right);
                 return -(double)right;
@@ -115,6 +128,24 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         return value;
     }
 
+    public object VisitLogicalExpr(Logical expr)
+    {
+        object left = Evaluate(expr.Left);
+
+        if (expr.OperatorToken.Type == TokenType.Or)
+        {
+            if (IsTruthy(left))
+                return left;
+        }
+        else
+        {
+            if (IsFalsey(left))
+                return left;
+        }
+
+        return Evaluate(expr.Right);
+    }
+
     public object? VisitPrintStmt(Print stmt)
     {
         object value = Evaluate(stmt.Expression);
@@ -140,6 +171,68 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         _environment.Define(stmt.Name, value);
 
         return null;
+    }
+
+    public object? VisitBlockStmt(Block stmt)
+    {
+        ExecuteBlock(stmt.Statements, new VariableEnvironment(_environment));
+        return null;
+    }
+
+    public object? VisitIfStmt(If stmt)
+    {
+        if (IsTruthy(Evaluate(stmt.Condition)))
+        {
+            Execute(stmt.TrueBranch);
+        }
+        else if (stmt.FalseBranch != null)
+        {
+            Execute(stmt.FalseBranch);
+        }
+
+        return null;
+    }
+
+    public object? VisitWhileStmt(While stmt)
+    {
+        while (IsTruthy(Evaluate(stmt.Condition))) 
+            Execute(stmt.Body);
+
+        return null;
+    }
+
+    public object? VisitForeverStmt(Forever stmt)
+    {
+        while (IsTruthy(true))
+            Execute(stmt.Body);
+
+        return null;
+    }
+
+    public object? VisitForawhileStmt(Forawhile stmt)
+    {
+        var random = new Random();
+        for (int i = 0; i < random.Next(); i++) 
+            Execute(stmt.Body);
+
+        return null;
+    }
+
+    private void ExecuteBlock(List<Statement> statements, VariableEnvironment environment)
+    {
+        VariableEnvironment prevEnv = _environment;
+
+        try
+        {
+            _environment = environment;
+
+            foreach (Statement statement in statements)
+                Execute(statement);
+        }
+        finally
+        {
+            _environment = prevEnv;
+        }
     }
 
     private string Stringify(object? obj)
@@ -234,6 +327,9 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
 
         return true;
     }
+
+    private bool IsFalsey(object? obj) =>
+        !IsTruthy(obj);
 
     private bool IsEqual(object? lhs, object? rhs)
     {

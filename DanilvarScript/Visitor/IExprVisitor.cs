@@ -11,4 +11,5 @@ public interface IExprVisitor<out T>
     T VisitTernaryExpr(Ternary expr);
     T? VisitVariableExpr(Variable expr);
     T VisitAssignExpr(Assign expr);
+    T VisitLogicalExpr(Logical expr);
 }

@@ -18,8 +18,8 @@ public class Parser
     {
         _tokens = tokens;
     }
-    
-    public IEnumerable<Statement?> Parse()
+
+    public IEnumerable<Statement?> ParseStatements()
     {
         var statments = new List<Statement?>();
 
@@ -31,6 +31,134 @@ public class Parser
         return statments;
     }
 
+    public Expression? ParseExpression()
+    {
+        try
+        {
+            return Expression();
+        }
+        catch (ParseError e)
+        {
+            return null;
+        }
+    }
+
+    private Statement Statement()
+    {
+        if (Match(TokenType.If))
+            return IfStmt();
+
+        if (Match(TokenType.While))
+            return WhileStmt();
+
+        if (Match(TokenType.For))
+            return ForStmt();
+
+        if (Match(TokenType.Forever))
+            return ForeverStmt();
+
+        if (Match(TokenType.Forawhile))
+            return ForawhileStmt();
+
+        if (Match(TokenType.LeftBrace))
+            return new Block(Block());
+
+        if (Match(TokenType.Print))
+            return PrintStmt();
+
+        return ExpressionStmt();
+    }
+
+    private Statement ForStmt()
+    {
+        ConsumeSymbol("for", '(', TokenType.LeftParen);
+
+        Statement? initializer;
+
+        if (Match(TokenType.Semicolon))
+            initializer = null;
+        else if (Match(TokenType.Let))
+            initializer = LetDeclaration();
+        else
+            initializer = ExpressionStmt();
+
+        Expression? condition = null;
+
+        if (!Check(TokenType.Semicolon))
+            condition = Expression();
+
+        ConsumeSymbol("loop condition");
+
+        Expression? increment = null;
+
+        if (!Check(TokenType.RightParen))
+            increment = Expression();
+
+        ConsumeSymbol("for clauses", ')', TokenType.RightParen);
+
+        Statement body = Statement();
+
+        if (increment != null)
+        {
+            var statements = new List<Statement>
+            {
+                body,
+                new ExpressionStmt(increment)
+            };
+            body = new Block(statements);
+        }
+
+        condition ??= new Literal(true);
+
+        body = new While(condition, body);
+
+        if (initializer != null)
+        {
+            var statements = new List<Statement>
+            {
+                initializer,
+                body
+            };
+            body = new Block(statements);
+        }
+
+        return body;
+    }
+
+    private Statement WhileStmt()
+    {
+        ConsumeSymbol("while", '(', TokenType.LeftParen);
+        Expression condition = Expression();
+        ConsumeSymbol("while", '(', TokenType.RightParen);
+        Statement body = Statement();
+
+        return new While(condition, body);
+    }
+
+    private Statement ForawhileStmt() =>
+        new Forawhile(Statement());
+
+    private Statement ForeverStmt()
+    {
+        Expression condition = new Literal(true);
+        return new While(condition, Statement());
+    }
+
+    private Statement IfStmt()
+    {
+        ConsumeSymbol("if", '(', TokenType.LeftParen);
+        Expression condition = Expression();
+        ConsumeSymbol("if", ')', TokenType.RightParen);
+
+        Statement trueBranch = Statement();
+        Statement? falseBranch = null;
+
+        if (Match(TokenType.Else))
+            falseBranch = Statement();
+
+        return new If(condition, trueBranch, falseBranch);
+    }
+
     private Expression Expression()
     {
         //return Equality();
@@ -40,7 +168,7 @@ public class Parser
 
     private Expression Assignment()
     {
-        Expression expression = Ternary();
+        Expression expression = Or();
 
         if (Match(TokenType.Equal))
         {
@@ -59,6 +187,12 @@ public class Parser
 
         return expression;
     }
+
+    private Expression Or() =>
+        BaseLogicalExpr(And, TokenType.Or);
+
+    private Expression And() =>
+        BaseLogicalExpr(Ternary, TokenType.And);
 
     private Statement? Declaration()
     {
@@ -85,30 +219,35 @@ public class Parser
         {
             initializer = Expression();
         }
-        
-        ConsumeSemicolon("variable declaration");
+
+        ConsumeSymbol("variable declaration");
         return new Let(name, initializer);
     }
 
-    private Statement Statement()
+    private List<Statement> Block()
     {
-        if (Match(TokenType.Print))
-            return PrintStmt();
+        var statements = new List<Statement>();
 
-        return ExpressionStmt();
+        while (!Check(TokenType.RightBrace) && !IsAtEnd())
+        {
+            statements.Add(Declaration());
+        }
+
+        ConsumeSymbol("block", '}', TokenType.RightBrace);
+        return statements;
     }
 
     private Statement ExpressionStmt()
     {
         Expression expression = Expression();
-        ConsumeSemicolon("expression");
+        ConsumeSymbol("expression");
         return new ExpressionStmt(expression);
     }
 
     private Statement PrintStmt()
     {
         Expression value = Expression();
-        ConsumeSemicolon("value");
+        ConsumeSymbol("value");
 
         return new Print(value);
     }
@@ -167,7 +306,7 @@ public class Parser
 
         if (Match(TokenType.Identifier))
             return new Variable(Prev());
-        
+
         if (Match(TokenType.LeftParen))
         {
             Expression expression = Expression();
@@ -187,8 +326,9 @@ public class Parser
         throw Error(Peek(), message);
     }
 
-    private void ConsumeSemicolon(string after = "statement") =>
-        Consume(TokenType.Semicolon, $"Expect ';' after {after}.");
+    private void ConsumeSymbol(string after = "statement", char symbol = ';',
+        TokenType tokenType = TokenType.Semicolon) =>
+        Consume(tokenType, $"Expect '{symbol}' after {after}.");
 
     private ParseError Error(Token token, string message)
     {
@@ -209,7 +349,7 @@ public class Parser
             switch (Peek().Type)
             {
                 case TokenType.Class:
-                case TokenType.Fun:
+                case TokenType.Func:
                 case TokenType.Let:
                 case TokenType.For:
                 case TokenType.If:
@@ -233,6 +373,21 @@ public class Parser
             Expression right = nextExpr();
 
             expression = new Binary(expression, operatorToken, right);
+        }
+
+        return expression;
+    }
+
+    private Expression BaseLogicalExpr(Func<Expression> nextExpr, params TokenType[] operators)
+    {
+        Expression expression = nextExpr();
+
+        while (Match(operators))
+        {
+            Token operatorToken = Prev();
+            Expression right = nextExpr();
+
+            expression = new Logical(expression, operatorToken, right);
         }
 
         return expression;

@@ -1,4 +1,5 @@
 using DanilvarScript.Errors;
+using DanilvarScript.Expr;
 using DanilvarScript.Stmt;
 using DanilvarScript.Tokens;
 
@@ -41,7 +42,7 @@ public static class DVScript
             if (line == null)
                 break;
 
-            Run(line);
+            Run(line, runFile: false);
 
             HadError = false;
 
@@ -49,27 +50,32 @@ public static class DVScript
         }
     }
 
-    public static void Run(string source)
+    public static void Run(string source, bool runFile = true)
     {
         var scanner = new Scanner(source);
         List<Token> tokens = scanner.ScanTokens();
 
-        /*foreach (Token token in tokens)
-        {
-            Console.WriteLine(token);
-        }*/
-
         var parser = new Parser(tokens);
-        IEnumerable<Statement?> statements = parser.Parse();
 
-        if (HadError)
-            return;
+        if (runFile)
+        {
+            IEnumerable<Statement?> statements = parser.ParseStatements();
 
-        /*
-        if (expression != null)
-            Console.WriteLine(new AbstartTreePrinter().Print(expression));
-        */
-        Interpreter.Interpret(statements);
+            if (HadError)
+                return;
+
+            Interpreter.Interpret(statements);
+        }
+        else
+        {
+            Expression? expression = parser.ParseExpression();
+
+            if (HadError)
+                return;
+
+            if (expression != null)
+                Interpreter.Interpret(expression);
+        }
     }
 
     public static void Error(int line, string message)

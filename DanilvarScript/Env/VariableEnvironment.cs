@@ -36,6 +36,12 @@ public class VariableEnvironment
             _values[name.Lexeme] = value;
             return;
         }
+        
+        if (Enclosing != null)
+        {
+            Enclosing.Assign(name, value);
+            return;
+        }
 
         throw new RuntimeError(name, $"Undefined variable '{name.Lexeme}'.");
     }

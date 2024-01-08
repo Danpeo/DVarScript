@@ -12,7 +12,9 @@ public class Scanner
         { "else", TokenType.Else },
         { "false", TokenType.False },
         { "for", TokenType.For },
-        { "fun", TokenType.Fun },
+        { "forever", TokenType.Forever },
+        { "forawhile", TokenType.Forawhile },
+        { "func", TokenType.Func },
         { "if", TokenType.If },
         { "nil", TokenType.Nil },
         { "or", TokenType.Or },
@@ -23,9 +25,9 @@ public class Scanner
         { "true", TokenType.True },
         { "let", TokenType.Let },
         { "while", TokenType.While },
-        {"be", TokenType.Be}
+        { "be", TokenType.Be }
     };
-    
+
     private readonly string _source;
     private readonly List<Token> _tokens = new();
     private int _start = 0;
@@ -121,6 +123,7 @@ public class Scanner
                 {
                     AddToken(TokenType.Slash);
                 }
+
                 break;
             case ' ':
             case '\r':
@@ -235,7 +238,7 @@ public class Scanner
         return true;
     }
 
-    private char Peek(int offset = 0) 
+    private char Peek(int offset = 0)
         => _current + offset >= _source.Length ? '\0' : _source[_current + offset];
 
     private char Advance() =>
