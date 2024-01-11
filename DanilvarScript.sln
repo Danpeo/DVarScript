@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DanilvarScript", "DanilvarScript\DanilvarScript.csproj", "{0CA1BFA6-F16B-474A-8B7F-D2BC41C6C361}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DVarScript.Interpreter", "DVarScript.Interpreter\DVarScript.Interpreter.csproj", "{7A2A8CBA-E794-456C-A085-0C91E52D8FC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{0CA1BFA6-F16B-474A-8B7F-D2BC41C6C361}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CA1BFA6-F16B-474A-8B7F-D2BC41C6C361}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0CA1BFA6-F16B-474A-8B7F-D2BC41C6C361}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A2A8CBA-E794-456C-A085-0C91E52D8FC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A2A8CBA-E794-456C-A085-0C91E52D8FC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A2A8CBA-E794-456C-A085-0C91E52D8FC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A2A8CBA-E794-456C-A085-0C91E52D8FC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

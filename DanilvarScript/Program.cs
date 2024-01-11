@@ -1,4 +1,7 @@
 ﻿//TODO: use Cocona later!
+
+using DVarScript.Interpreter;
+
 if (args.Length > 1)
 {
     Console.WriteLine("Usage: Danilvar [script]");
