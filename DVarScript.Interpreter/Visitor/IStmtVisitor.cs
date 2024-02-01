@@ -11,4 +11,6 @@ public interface IStmtVisitor<out T>
     T? VisitIfStmt(If stmt);
     T? VisitWhileStmt(While stmt);
     T? VisitForawhileStmt(Forawhile stmt);
+    T? VisitFunctionStmt(Function stmt);
+    T? VisitReturnStmt(Return stmt);
 }

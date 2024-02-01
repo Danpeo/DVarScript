@@ -45,6 +45,11 @@ public class AbstartTreePrinter : IExprVisitor<string>
         throw new NotImplementedException();
     }
 
+    public string VisitCallExpr(Call expr)
+    {
+        throw new NotImplementedException();
+    }
+
     private string Parenthesize(string name, params Expression[] expressions)
     {
         var strBuilder = new StringBuilder();

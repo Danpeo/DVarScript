@@ -3,31 +3,34 @@ using DVarScript.Interpreter.Tokens;
 
 namespace DVarScript.Interpreter.Env;
 
-public class VariableEnvironment
+public class ProgramEnvironment
 {
-    public VariableEnvironment? Enclosing { get; private set; }
+    public ProgramEnvironment? Enclosing { get; private set; }
     private readonly Dictionary<string, object?> _values = new();
 
-    public VariableEnvironment()
+    public ProgramEnvironment()
     {
         Enclosing = null;
     }
 
-    public VariableEnvironment(VariableEnvironment enclosing)
+    public ProgramEnvironment(ProgramEnvironment enclosing)
     {
         Enclosing = enclosing;
     }
-    
-    public void Define(Token name, object? value)
+
+    public void DefineVariable(Token name, object? value)
     {
         if (!_values.ContainsKey(name.Lexeme))
         {
-            _values[name.Lexeme] = value;
-            return;            
+            Define(name.Lexeme, value);
+            return;
         }
-        
+
         throw new RuntimeError(name, $"Variable '{name.Lexeme}' is already defined.");
     }
+
+    public void Define(string name, object? value) => 
+        _values[name] = value;
 
     public void Assign(Token name, object value)
     {
@@ -36,7 +39,7 @@ public class VariableEnvironment
             _values[name.Lexeme] = value;
             return;
         }
-        
+
         if (Enclosing != null)
         {
             Enclosing.Assign(name, value);

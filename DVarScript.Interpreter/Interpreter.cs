@@ -1,4 +1,5 @@
 using System.Globalization;
+using DVarScript.Interpreter.Callables;
 using DVarScript.Interpreter.Env;
 using DVarScript.Interpreter.Errors;
 using DVarScript.Interpreter.Expr;
@@ -10,8 +11,18 @@ namespace DVarScript.Interpreter;
 
 public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
 {
-    private VariableEnvironment _environment = new();
+    public ProgramEnvironment Globals { get; } = new();
+    private ProgramEnvironment _environment;
 
+    public Interpreter()
+    {
+        Globals.Define("clock", new ClockFunc());
+        Globals.Define("println", new PrintFunc(printLine: true));
+        Globals.Define("print", new PrintFunc(printLine: false));
+        
+        _environment = Globals;
+    }
+    
     public void Interpret(IEnumerable<Statement?> statements)
     {
         try
@@ -146,6 +157,21 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         return Evaluate(expr.Right);
     }
 
+    public object? VisitCallExpr(Call expr)
+    {
+        object callee = Evaluate(expr.Callee);
+
+        var args = expr.Args.Select(Evaluate).ToList();
+
+        if (callee is not ICallable function)
+            throw new RuntimeError(expr.Paren, "Can only call functions and classes.");
+
+        if (args.Count != function.Arity() && function.Arity() != -1)
+            throw new RuntimeError(expr.Paren, $"Expected {function.Arity()} arguments but got {args.Count}.");
+
+        return function.Call(this, args);
+    }
+
     public object? VisitPrintStmt(Print stmt)
     {
         object value = Evaluate(stmt.Expression);
@@ -168,14 +194,14 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         if (stmt.Initializer != null)
             value = Evaluate(stmt.Initializer);
 
-        _environment.Define(stmt.Name, value);
+        _environment.DefineVariable(stmt.Name, value);
 
         return null;
     }
 
     public object? VisitBlockStmt(Block stmt)
     {
-        ExecuteBlock(stmt.Statements, new VariableEnvironment(_environment));
+        ExecuteBlock(stmt.Statements, new ProgramEnvironment(_environment));
         return null;
     }
 
@@ -195,7 +221,7 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
 
     public object? VisitWhileStmt(While stmt)
     {
-        while (IsTruthy(Evaluate(stmt.Condition))) 
+        while (IsTruthy(Evaluate(stmt.Condition)))
             Execute(stmt.Body);
 
         return null;
@@ -205,15 +231,33 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
     public object? VisitForawhileStmt(Forawhile stmt)
     {
         var random = new Random();
-        for (int i = 0; i < random.Next(); i++) 
+        for (int i = 0; i < random.Next(); i++)
             Execute(stmt.Body);
 
         return null;
     }
 
-    private void ExecuteBlock(List<Statement> statements, VariableEnvironment environment)
+    public object? VisitFunctionStmt(Function stmt)
     {
-        VariableEnvironment prevEnv = _environment;
+        var function = new FunctionCallable(stmt, _environment);
+        _environment.Define(stmt.Name.Lexeme, function);
+        
+        return null;
+    }
+
+    public object? VisitReturnStmt(Return stmt)
+    {
+        object? value = null;
+        
+        if (stmt.Value!= null)
+            value = Evaluate(stmt.Value);
+
+        throw new ReturnE(value);
+    }
+
+    public void ExecuteBlock(List<Statement> statements, ProgramEnvironment environment)
+    {
+        ProgramEnvironment prevEnv = _environment;
 
         try
         {
@@ -228,7 +272,7 @@ public class Interpreter : IExprVisitor<object>, IStmtVisitor<object>
         }
     }
 
-    private string Stringify(object? obj)
+    public string Stringify(object? obj)
     {
         if (obj == null)
             return "nil";

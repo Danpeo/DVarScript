@@ -12,4 +12,5 @@ public interface IExprVisitor<out T>
     T? VisitVariableExpr(Variable expr);
     T VisitAssignExpr(Assign expr);
     T VisitLogicalExpr(Logical expr);
+    T VisitCallExpr(Call expr);
 }

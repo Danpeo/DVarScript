@@ -66,7 +66,22 @@ public class Parser
         if (Match(TokenType.Print))
             return PrintStmt();
 
+        if (Match(TokenType.Return))
+            return ReturnStmt();
+        
         return ExpressionStmt();
+    }
+
+    private Statement ReturnStmt()
+    {
+        Token keyword = Prev();
+        Expression? value = null;
+
+        if (!Check(TokenType.Semicolon))
+            value = Expression();
+
+        Consume(TokenType.Semicolon, ';', "return value");
+        return new Return(keyword, value);
     }
 
     private Statement ForStmt()
@@ -198,6 +213,9 @@ public class Parser
     {
         try
         {
+            if (Match(TokenType.Func))
+                return FunctionDeclaration("function");
+
             if (Match(TokenType.Let))
                 return LetDeclaration();
 
@@ -208,6 +226,33 @@ public class Parser
             Sync();
             return null;
         }
+    }
+
+    private Function FunctionDeclaration(string kind)
+    {
+        Token name = Consume(TokenType.Identifier, $"Expect {kind} name.");
+
+        Consume(TokenType.LeftParen, '(', kind);
+
+        var parameters = new List<Token>();
+
+        if (!Check(TokenType.RightParen))
+        {
+            do
+            {
+                if (parameters.Count >= 255)
+                    Error(Peek(), "Can't have more than 255 parameters.");
+
+                parameters.Add(Consume(TokenType.Identifier, "Expect parameter name."));
+            } while (Match(TokenType.Comma));
+        }
+
+        Consume(TokenType.RightParen, ')', kind);
+        Consume(TokenType.LeftBrace, "Expect '{' before " + kind + " body.");
+        
+        List<Statement> body = Block();
+        
+        return new Function(name, parameters, body);
     }
 
     private Statement LetDeclaration()
@@ -273,7 +318,46 @@ public class Parser
             return new Unary(operatorToken, right);
         }
 
-        return Primary();
+        return CallExpr();
+    }
+
+    private Expression CallExpr()
+    {
+        Expression expression = Primary();
+
+        while (true)
+        {
+            if (Match(TokenType.LeftParen))
+            {
+                expression = FinishCall(expression);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return expression;
+    }
+
+    private Expression FinishCall(Expression callee)
+    {
+        var args = new List<Expression>();
+
+        if (!Check(TokenType.RightParen))
+        {
+            do
+            {
+                if (args.Count >= 255)
+                    Error(Peek(), "Can't have more than 255 arguments.");
+
+                args.Add(Expression());
+            } while (Match(TokenType.Comma));
+        }
+
+        Token paren = Consume(TokenType.RightParen, ')', "arguments");
+
+        return new Call(callee, paren, args);
     }
 
     private Expression Ternary()
@@ -326,9 +410,14 @@ public class Parser
         throw Error(Peek(), message);
     }
 
+    private Token Consume(TokenType type, char symbol, string after) =>
+        Consume(type, $"Expect '{symbol}' after {after}.");
+
     private void ConsumeSymbol(string after = "statement", char symbol = ';',
-        TokenType tokenType = TokenType.Semicolon) =>
+        TokenType tokenType = TokenType.Semicolon)
+    {
         Consume(tokenType, $"Expect '{symbol}' after {after}.");
+    }
 
     private ParseError Error(Token token, string message)
     {
