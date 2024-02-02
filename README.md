@@ -169,7 +169,7 @@ while (a < 10) {
 For loop: Loops through a set of statements a specified number of times.
 
 ```
-for (let i be 0; i < 10; i++) {
+for (let i be 0; i < 10; i = i + 1) {
   println(i);
 }
 ```
